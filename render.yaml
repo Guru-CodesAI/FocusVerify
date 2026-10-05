@@ -1,0 +1,70 @@
+services:
+  - type: web
+    name: focusverify-api
+    runtime: python
+    plan: free
+    rootDir: .
+    buildCommand: |
+      pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHONPATH
+        value: .
+      - key: APP_ENV
+        value: production
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: MODEL_CONFIG
+        value: focusverify-v1
+      - key: DATABASE_URL
+        fromDatabase:
+          name: focusverify-db
+          property: connectionString
+      - key: WEB_ORIGIN
+        fromService:
+          type: web
+          name: focusverify-web
+          property: host
+      - key: REVIEWER_EMAIL
+        sync: false
+      - key: REVIEWER_PASSWORD
+        sync: false
+      - key: AUTH_RATE_LIMIT
+        value: 5
+      - key: AUTH_RATE_WINDOW_SECONDS
+        value: 900
+      - key: SESSION_CREATE_LIMIT
+        value: 20
+      - key: EVENT_INGESTION_LIMIT
+        value: 120
+
+  - type: web
+    name: focusverify-web
+    runtime: node
+    plan: free
+    rootDir: .
+    buildCommand: |
+      npm ci
+      case "$NEXT_PUBLIC_API_BASE_URL" in
+        https://*) ;;
+        *) export NEXT_PUBLIC_API_BASE_URL="https://${NEXT_PUBLIC_API_BASE_URL}";;
+      esac
+      npm run build
+    startCommand: npx next start -H 0.0.0.0 -p $PORT
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22.14.0
+      - key: NEXT_PUBLIC_API_BASE_URL
+        fromService:
+          type: web
+          name: focusverify-api
+          property: host
+
+databases:
+  - name: focusverify-db
+    databaseName: focusverify
+    user: focusverify
+    plan: basic-256mb

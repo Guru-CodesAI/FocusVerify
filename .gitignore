@@ -12,6 +12,15 @@
 
 # testing
 /coverage
+.pytest_cache/
+__pycache__/
+*.py[cod]
+.coverage
+*.db
+*.db-*
+*.sqlite3
+*.sqlite3-*
+.venv/
 
 # next.js
 /.next/
@@ -23,6 +32,11 @@
 # misc
 .DS_Store
 *.pem
+*.key
+*.p12
+*.pfx
+*.crt
+.secrets/
 
 # debug
 npm-debug.log*
@@ -32,6 +46,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
