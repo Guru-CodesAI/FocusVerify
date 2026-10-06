@@ -11,11 +11,20 @@
 
 ## Mitigations
 
-- strict validation of payloads
-- rate limiting and request-size policies
-- secure headers and content policies
-- environment-based secrets
-- reviewer routes require a signed, expiring bearer token
-- review actions store a current disposition and append-only audit entry
+- strict payload validation, a 32 KiB request-body cap, and bounded evidence fields
+- candidate bearer tokens scoped to one session, plus signed, expiring reviewer tokens
+- production health checks that reject weak authentication settings and non-HTTPS origins
+- CORS restricted to the configured web origin and security response headers, including HSTS in production
+- database-backed throttles for reviewer login, session creation, and per-session event ingestion
+- current reviewer dispositions backed by append-only audit entries
+- credentials and signing keys supplied through environment variables
 
-Rate limiting, request-size policy, secure deployment headers, managed reviewer identities, and retention controls are still deployment work; the prototype should not be exposed publicly without them.
+## Remaining risks and deployment work
+
+- Login and session-creation throttles key on the ASGI client's connecting address. Verify that this is the real client address behind the deployment proxy; otherwise legitimate users may share a throttle bucket. The throttles are not a distributed abuse-prevention service.
+- Reviewer access is one environment-configured account, not managed identity or per-user authorization.
+- Candidate session tokens are stored in per-tab browser session storage and are exposed to same-origin script execution.
+- Browser events are client-controlled telemetry, not tamper-proof evidence.
+- Content Security Policy, operational alerting, retention/deletion procedures, and backup/recovery practices are not fully configured by this prototype.
+
+Use only test or approved pilot data until proxy-aware throttling, reviewer identity, monitoring, data retention, and privacy requirements have been reviewed. Do not use this prototype for automated or high-stakes decisions.

@@ -100,6 +100,15 @@ def test_health_check_fails_when_production_auth_configuration_is_unsafe(monkeyp
     assert response.status_code == 503
     assert response.json()["detail"] == "Authentication configuration is not ready"
 
+    monkeypatch.setattr(
+        main,
+        "AUTH_SECRET",
+        "replace-with-a-random-secret-of-at-least-32-characters",
+    )
+    templated_secret = client.get("/api/health")
+    assert templated_secret.status_code == 503
+    assert templated_secret.json()["detail"] == "Authentication configuration is not ready"
+
 
 def test_session_lifecycle_is_candidate_scoped_and_retry_safe():
     session_id, headers = create_candidate_session()

@@ -436,10 +436,21 @@ def validate_auth_configuration() -> None:
         )
     except ValueError:
         valid_origin = False
+    normalized_auth_secret = AUTH_SECRET.casefold()
     if APP_ENV == "production" and (
-        AUTH_SECRET in {"change-me-in-production", "replace-me"}
-        or AUTH_SECRET.startswith("development-only")
-        or len(AUTH_SECRET) < 32
+        len(AUTH_SECRET) < 32
+        or any(
+            marker in normalized_auth_secret
+            for marker in (
+                "change-me",
+                "development-only",
+                "example-secret",
+                "placeholder",
+                "random-secret",
+                "replace",
+                "your-secret",
+            )
+        )
         or REVIEWER_PASSWORD in {"focusverify-demo", "replace-this-demo-password"}
         or len(REVIEWER_PASSWORD) < 16
         or REVIEWER_EMAIL.casefold() == "reviewer@focusverify.local"
