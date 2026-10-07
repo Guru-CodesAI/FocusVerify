@@ -1,6 +1,6 @@
 # Deploy FocusVerify on Render
 
-This guide deploys the checked-in `render.yaml` Blueprint. It provisions a Next.js web service, a FastAPI web service, and a managed PostgreSQL database. Create and operate the Render resources yourself; no deployment is triggered by these instructions.
+This guide covers both deployment options: deploying the checked-in `render.yaml` Blueprint, or configuring the web and API services manually. Create and operate the Render resources yourself; no deployment is triggered by these instructions.
 
 ## Before you start
 
@@ -10,7 +10,7 @@ This guide deploys the checked-in `render.yaml` Blueprint. It provisions a Next.
 
 Never commit production secrets or paste them into this guide, issues, or logs.
 
-## Create the Blueprint
+## Option A: Deploy with the Blueprint (recommended)
 
 1. In the Render dashboard, choose **New +** → **Blueprint**.
 2. Connect the GitHub repository containing FocusVerify and select the branch you pushed.
@@ -19,6 +19,41 @@ Never commit production secrets or paste them into this guide, issues, or logs.
 5. Apply the Blueprint. Render generates and stores `AUTH_SECRET`; do not replace it with a committed or shared value. Keep it stable across deploys so unexpired tokens remain valid.
 
 The Blueprint wires the API to the managed database, configures the web origin for CORS, and builds the frontend with the API's HTTPS host. Do not manually set `DATABASE_URL`, `WEB_ORIGIN`, or `NEXT_PUBLIC_API_BASE_URL` for the default `onrender.com` domains.
+
+## Option B: Configure Render services manually
+
+Use this option if you created a Render Web Service directly instead of creating a Blueprint. The repository root contains `package.json`; there is no separate frontend subdirectory.
+
+### 1. Create and deploy the API first
+
+Create a Python Web Service from the same GitHub repository and `main` branch:
+
+- **Root Directory:** repository root (leave blank, or use `.` if Render requires a value)
+- **Build Command:** `pip install -r backend/requirements.txt`
+- **Start Command:** `uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT`
+- **Health Check Path:** `/api/health`
+
+Connect a managed PostgreSQL database and set `DATABASE_URL` to its internal connection string. Also set `PYTHONPATH` to `.`, `APP_ENV` to `production`, `WEB_ORIGIN` to the exact HTTPS URL of the web service (you can set this after creating the web service), and `REVIEWER_EMAIL` and `REVIEWER_PASSWORD`. Use a unique reviewer password of at least 16 characters. Generate a private `AUTH_SECRET` of at least 32 characters; do not use the development values from `.env.example`.
+
+Wait for the API deployment and confirm `https://<api-service>.onrender.com/api/health` returns HTTP 200 before building the frontend.
+
+### 2. Create the frontend Web Service
+
+Create a Node Web Service from the same repository and branch:
+
+- **Root Directory:** repository root (leave blank, or use `.` if Render requires a value)
+- **Build Command:** `npm ci && npm run build`
+- **Start Command:** `npx next start -H 0.0.0.0 -p $PORT`
+- **Environment variable `NODE_VERSION`:** `22.14.0`
+- **Environment variable `NEXT_PUBLIC_API_BASE_URL`:** the API's public HTTPS origin, such as `https://<api-service>.onrender.com` (no path or trailing slash)
+
+Set `NEXT_PUBLIC_API_BASE_URL` before the first build. Next.js validates and embeds this public URL during the production build; if it is missing, `next build` fails with `NEXT_PUBLIC_API_BASE_URL must be set for production builds.` Adding or changing it later requires a new frontend deployment.
+
+### 3. Finish API CORS configuration and verify
+
+Copy the frontend's exact public HTTPS origin into the API's `WEB_ORIGIN` environment variable, then redeploy the API. Do not include a path or trailing slash. Check the API health endpoint again, then smoke-test `/setup`, a complete test session, `/report`, and reviewer sign-in as described below.
+
+Do not mix the manual and Blueprint approaches: with the Blueprint, service references set these values automatically; with manual services, configure the URLs explicitly as above.
 
 ## Wait for services and check logs
 

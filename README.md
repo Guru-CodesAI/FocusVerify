@@ -84,4 +84,6 @@ See [docs/LIMITATIONS.md](./docs/LIMITATIONS.md).
 
 This repository includes a Render Blueprint for a Next.js frontend, FastAPI API, and managed PostgreSQL database. Follow the [Render deployment guide](./docs/RENDER-DEPLOYMENT.md) to connect the repository, configure reviewer credentials, deploy, and verify the services.
 
+If creating Render services manually, deploy the API first, then create the Node Web Service from the repository root with `npm ci && npm run build` and `npx next start -H 0.0.0.0 -p $PORT`. Set `NODE_VERSION=22.14.0` and set `NEXT_PUBLIC_API_BASE_URL` to the API's public HTTPS origin before building the web service. The frontend is at the repository root; do not use a `frontend` root directory. See the deployment guide for the complete API and CORS configuration.
+
 The blueprint uses free web services and a paid PostgreSQL plan. Render free web services can sleep when idle; upgrade them in Render if continuous availability is required. This is suitable for a controlled internal pilot, not high-stakes or unattended proctoring. Review the [security boundaries](./docs/SECURITY.md), privacy limits, retention, backups, and reviewer identity requirements before broader use.
